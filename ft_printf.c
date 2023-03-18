@@ -1,52 +1,117 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   ft_printf.c                                        :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: acalmaz <acalmaz@student.42kocaeli.com.    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2023/03/18 14:29:19 by acalmaz           #+#    #+#             */
+/*   Updated: 2023/03/18 14:41:01 by acalmaz          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "ft_printf.h"
 
-int	ft_putchar(char a)
+static int	ft_putchar(char c)
 {
-	return (write(1, &a, 1));
+	return (write(1, &c, 1));
 }
 
-int	ft_format(va_list *args, char c)
+static int	ft_putstr(char *s)
 {
-	if (c == 'u')
-		return (ft_unsigned(va_arg((*args), unsigned int)));
-	else if (c == 'c')
-		return (ft_putchar(va_arg((*args), int)));
-	else if (c == 'i' || c == 'd')
-		return (ft_int(va_arg((*args), int)));
-	else if (c == 'x' || c == 'X')
-		return (ft_hex(va_arg((*args), unsigned int), c));
-	else if (c == 'p')
-		return (ft_point(va_arg((*args), unsigned long), 1));
-	else if (c == 's')
-		return (ft_string(va_arg((*args), char *)));
-	else
-		return (ft_string("%"));
-}
+	int	i;
 
-bool	ft_flag_catch(const char *str, int i)
-{
-	return (str[i] == '%' && (str[i + 1] == 'c' || str[i + 1] == 'd'
-			|| str[i + 1] == 'i' || str[i + 1] == 'u'
-			|| str[i + 1] == 'x' || str[i + 1] == 'X'
-			|| str[i + 1] == 'p' || str[i + 1] == 's' || str[i + 1] == '%'));
-}
-
-int	ft_printf(const char *str, ...)
-{
-	va_list	args;
-	int		i;
-	int		rtn;
-
-	i = -1;
-	rtn = 0;
-	va_start(args, str);
-	while (str[++i])
+	i = 0;
+	if (s != NULL)
 	{
-		if (ft_flag_catch(str, i))
-			rtn += ft_format(&args, str[++i]);
+		i = 0;
+		while (s[i])
+		{
+			ft_putchar(s[i]);
+			i++;
+		}
+	}
+	else
+	{
+		return (ft_putstr("(null)"));
+	}
+	return (i);
+}
+
+static int	ft_nbr_printer(unsigned long long int nbr, char	*base_c,
+	int base, int p)
+{
+	int		nbr_backwards[100];
+	int		i;
+	int		res;
+
+	i = 0;
+	res = 0;
+	if (p == 1)
+		res += ft_putstr("0x");
+	if (nbr == 0)
+		res += ft_putstr("0");
+	if (p == 2 && (int)nbr < 0)
+	{
+		nbr = nbr * -1;
+		res += ft_putstr("-");
+	}
+	while (nbr)
+	{
+		nbr_backwards[i] = nbr % base;
+		nbr = nbr / base;
+		i++;
+	}
+	while (--i >= 0)
+		res += ft_putchar (base_c[nbr_backwards[i]]);
+	return (res);
+}
+
+static int	ft_sort(const char *s, va_list arg)
+{
+	if (*s == 'd' || *s == 'i')
+		return (ft_nbr_printer(va_arg(arg, int)
+				, "0123456789", 10, 2));
+	if (*s == 'u')
+		return (ft_nbr_printer(va_arg(arg, unsigned int)
+				, "0123456789", 10, 0));
+	if (*s == 'x' )
+		return (ft_nbr_printer(va_arg(arg, unsigned int)
+				, "0123456789abcdef", 16, 0));
+	if (*s == 'X')
+		return (ft_nbr_printer(va_arg(arg, unsigned int)
+				, "0123456789ABCDEF", 16, 0));
+	if (*s == 'p')
+		return (ft_nbr_printer(va_arg(arg, unsigned long long int)
+				, "0123456789abcdef", 16, 1));
+	if (*s == 's')
+		return (ft_putstr(va_arg(arg, char *)));
+	if (*s == 'c')
+		return (ft_putchar(va_arg(arg, int)));
+	if (*s == '%')
+		return (ft_putstr("%"));
+	return (0);
+}
+
+int	ft_printf(const char *s, ...)
+{
+	va_list		args;
+	int			res;
+
+	res = 0;
+	va_start(args, s);
+	while (*s)
+	{
+		if (*s == '%')
+		{
+			s++;
+			res += ft_sort(s, args);
+		}
 		else
-			rtn += write(1, &str[i], 1);
+		res += write(1, &*s, 1);
+		if (*s != '\0')
+			s++;
 	}
 	va_end(args);
-	return (rtn);
+	return (res);
 }
